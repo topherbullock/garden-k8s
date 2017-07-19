@@ -135,11 +135,26 @@ func (c *container) SetGraceTime(graceTime time.Duration) error {
 }
 
 func (c *container) Properties() (garden.Properties, error) {
-	return garden.Properties{}, errors.New("Not Implemented")
+	podsClient := c.client.Pods(c.namespace)
+	pod, err := podsClient.Get(c.handle, k8s_meta.GetOptions{})
+	if err != nil {
+		return garden.Properties{}, err
+	}
+
+	return garden.Properties(pod.GetAnnotations()), nil
 }
 
 func (c *container) Property(name string) (string, error) {
-	return "", errors.New("Not Implemented")
+	props, err := c.Properties()
+	if err != nil {
+		return "", err
+	}
+
+	value, ok := props[name]
+	if !ok {
+		return "", errors.New("property not found")
+	}
+	return value, nil
 }
 
 func (c *container) SetProperty(name string, value string) error {

@@ -74,6 +74,54 @@ var _ = Describe("Container", func() {
 		})
 	})
 
+	Describe("Properties", func() {
+		Context("When the pod exists and has annotations", func() {
+			BeforeEach(func() {
+				fakePods.GetReturns(&v1.Pod{
+					metav1.TypeMeta{},
+					metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"hello": "world",
+							"foo":   "bar",
+						},
+					},
+					v1.PodSpec{},
+					v1.PodStatus{},
+				}, nil)
+			})
+
+			It("returns the annotations as garden properties", func() {
+				props, err := c.Properties()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(props["hello"]).To(Equal("world"))
+			})
+		})
+	})
+
+	Describe("Property", func() {
+		Context("When the pod exists and has annotations", func() {
+			BeforeEach(func() {
+				fakePods.GetReturns(&v1.Pod{
+					metav1.TypeMeta{},
+					metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"hello": "world",
+							"foo":   "bar",
+						},
+					},
+					v1.PodSpec{},
+					v1.PodStatus{},
+				}, nil)
+			})
+
+			It("returns the annotation value", func() {
+				val, err := c.Property("foo")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(val).To(Equal("bar"))
+			})
+		})
+	})
+
 	Describe("StreamIn", func() {
 
 	})
@@ -123,14 +171,6 @@ var _ = Describe("Container", func() {
 	})
 
 	Describe("SetGraceTime", func() {
-
-	})
-
-	Describe("Properties", func() {
-
-	})
-
-	Describe("Property", func() {
 
 	})
 
