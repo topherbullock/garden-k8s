@@ -158,9 +158,26 @@ func (c *container) Property(name string) (string, error) {
 }
 
 func (c *container) SetProperty(name string, value string) error {
-	return errors.New("Not Implemented")
+	podsClient := c.client.Pods(c.namespace)
+	pod, err := podsClient.Get(c.handle, k8s_meta.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	pod.Annotations[name] = value
+
+	_, err = podsClient.Update(pod)
+	return err
 }
 
 func (c *container) RemoveProperty(name string) error {
-	return errors.New("Not Implemented")
+	podsClient := c.client.Pods(c.namespace)
+	pod, err := podsClient.Get(c.handle, k8s_meta.GetOptions{})
+	if err != nil {
+		return err
+	}
+	delete(pod.Annotations, name)
+
+	_, err = podsClient.Update(pod)
+	return err
 }

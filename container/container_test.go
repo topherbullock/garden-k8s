@@ -122,6 +122,72 @@ var _ = Describe("Container", func() {
 		})
 	})
 
+	Describe("SetProperty", func() {
+
+		var existingPod *v1.Pod
+
+		Context("When the pod exists and has annotations", func() {
+			existingPod = &v1.Pod{
+				metav1.TypeMeta{},
+				metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"hello": "world",
+						"foo":   "bar",
+					},
+				},
+				v1.PodSpec{},
+				v1.PodStatus{},
+			}
+
+			BeforeEach(func() {
+				fakePods.GetReturns(existingPod, nil)
+			})
+
+			It("sets an existing property to a new ", func() {
+				err := c.SetProperty("foo", "fufu")
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(fakePods.UpdateCallCount()).To(Equal(1))
+				annotations := existingPod.GetAnnotations()
+				Expect(annotations["foo"]).To(Equal("fufu"))
+			})
+		})
+	})
+
+	Describe("RemoveProperty", func() {
+		var existingPod *v1.Pod
+
+		Context("When the pod exists and has annotations", func() {
+			existingPod = &v1.Pod{
+				metav1.TypeMeta{},
+				metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"hello": "world",
+						"foo":   "bar",
+					},
+				},
+				v1.PodSpec{},
+				v1.PodStatus{},
+			}
+
+			BeforeEach(func() {
+				fakePods.GetReturns(existingPod, nil)
+			})
+
+			It("deletes an existing property", func() {
+				err := c.RemoveProperty("foo")
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(fakePods.UpdateCallCount()).To(Equal(1))
+				annotations := existingPod.GetAnnotations()
+				val, found := annotations["foo"]
+				Expect(val).To(BeEmpty())
+				Expect(found).To(BeFalse())
+			})
+		})
+
+	})
+
 	Describe("StreamIn", func() {
 
 	})
@@ -171,14 +237,6 @@ var _ = Describe("Container", func() {
 	})
 
 	Describe("SetGraceTime", func() {
-
-	})
-
-	Describe("SetProperty", func() {
-
-	})
-
-	Describe("RemoveProperty", func() {
 
 	})
 
