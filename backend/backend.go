@@ -5,25 +5,25 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
-	restclient "k8s.io/client-go/rest"
-
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 var errNotImpl = errors.New("Not implemented")
 
 type backend struct {
-	k8sClient *kubernetes.Clientset
+	client Client
 }
 
-func New(config *restclient.Config) garden.Backend {
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err)
-	}
+//go:generate counterfeiter . Client
+
+type Client interface {
+	Pods(string) v1.PodInterface
+}
+
+func New(client Client) garden.Backend {
 
 	return &backend{
-		k8sClient: clientset,
+		client: client,
 	}
 }
 

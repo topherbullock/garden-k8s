@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagerflags"
 	"github.com/topherbullock/garden-k8s/backend"
+	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 )
 
@@ -37,10 +38,15 @@ func main() {
 
 	logger, _ := lagerflags.New("garden-k8s")
 
-	k8s := backend.New(&restclient.Config{})
+	clientset, err := kubernetes.NewForConfig(&restclient.Config{})
+	if err != nil {
+		panic(err)
+	}
+
+	k8s := backend.New(clientset)
 
 	gardenServer := server.New(*listenNetwork, *listenAddr, 10*time.Minute, k8s, logger)
-	err := gardenServer.Start()
+	err = gardenServer.Start()
 	if err != nil {
 		logger.Fatal("Server Failed to Start", err)
 		os.Exit(1)

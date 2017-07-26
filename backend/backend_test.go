@@ -8,13 +8,16 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	restclient "k8s.io/client-go/rest"
 )
 
 var _ = Describe("Backend", func() {
-	var k8s garden.Backend
+	var (
+		k8s    garden.Backend
+		client backend.Client
+	)
+
 	BeforeEach(func() {
-		k8s = backend.New(&restclient.Config{})
+		k8s = backend.New(client)
 	})
 
 	Describe("Ping", func() {

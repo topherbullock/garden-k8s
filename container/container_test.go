@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/topherbullock/garden-k8s/container"
-	"github.com/topherbullock/garden-k8s/container/containerfakes"
+	"github.com/topherbullock/garden-k8s/v1fakes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"
 )
@@ -15,17 +15,14 @@ var _ = Describe("Container", func() {
 	var c garden.Container
 	var handle = "messiah"
 	var namespace string
-	var client *containerfakes.FakeClient
-	var fakePods *containerfakes.FakePods
+	var fakeClient *v1fakes.FakePodInterface
 
 	BeforeEach(func() {
-		client = new(containerfakes.FakeClient)
-		fakePods = new(containerfakes.FakePods)
-		client.PodsReturns(fakePods)
+		fakeClient = new(v1fakes.FakePodInterface)
 	})
 
 	JustBeforeEach(func() {
-		c = container.New(handle, namespace, client)
+		c = container.New(handle, namespace, fakeClient)
 	})
 
 	Describe("Handle", func() {
@@ -38,14 +35,14 @@ var _ = Describe("Container", func() {
 	Describe("Stop", func() {
 		Context("When deletion succeeds", func() {
 			BeforeEach(func() {
-				fakePods.DeleteReturns(nil)
+				fakeClient.DeleteReturns(nil)
 			})
 
 			It("deletes the pod by handle", func() {
 				err := c.Stop(true)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(fakePods.DeleteCallCount()).To(Equal(1))
-				handel, _ := fakePods.DeleteArgsForCall(0)
+				Expect(fakeClient.DeleteCallCount()).To(Equal(1))
+				handel, _ := fakeClient.DeleteArgsForCall(0)
 				Expect(handel).To(Equal("messiah"))
 			})
 		})
@@ -54,7 +51,7 @@ var _ = Describe("Container", func() {
 	Describe("Info", func() {
 		Context("When the pod exists", func() {
 			BeforeEach(func() {
-				fakePods.GetReturns(&v1.Pod{
+				fakeClient.GetReturns(&v1.Pod{
 					metav1.TypeMeta{},
 					metav1.ObjectMeta{},
 					v1.PodSpec{},
@@ -77,7 +74,7 @@ var _ = Describe("Container", func() {
 	Describe("Properties", func() {
 		Context("When the pod exists and has annotations", func() {
 			BeforeEach(func() {
-				fakePods.GetReturns(&v1.Pod{
+				fakeClient.GetReturns(&v1.Pod{
 					metav1.TypeMeta{},
 					metav1.ObjectMeta{
 						Annotations: map[string]string{
@@ -101,7 +98,7 @@ var _ = Describe("Container", func() {
 	Describe("Property", func() {
 		Context("When the pod exists and has annotations", func() {
 			BeforeEach(func() {
-				fakePods.GetReturns(&v1.Pod{
+				fakeClient.GetReturns(&v1.Pod{
 					metav1.TypeMeta{},
 					metav1.ObjectMeta{
 						Annotations: map[string]string{
@@ -140,14 +137,14 @@ var _ = Describe("Container", func() {
 			}
 
 			BeforeEach(func() {
-				fakePods.GetReturns(existingPod, nil)
+				fakeClient.GetReturns(existingPod, nil)
 			})
 
 			It("sets an existing property to a new ", func() {
 				err := c.SetProperty("foo", "fufu")
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(fakePods.UpdateCallCount()).To(Equal(1))
+				Expect(fakeClient.UpdateCallCount()).To(Equal(1))
 				annotations := existingPod.GetAnnotations()
 				Expect(annotations["foo"]).To(Equal("fufu"))
 			})
@@ -171,14 +168,14 @@ var _ = Describe("Container", func() {
 			}
 
 			BeforeEach(func() {
-				fakePods.GetReturns(existingPod, nil)
+				fakeClient.GetReturns(existingPod, nil)
 			})
 
 			It("deletes an existing property", func() {
 				err := c.RemoveProperty("foo")
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(fakePods.UpdateCallCount()).To(Equal(1))
+				Expect(fakeClient.UpdateCallCount()).To(Equal(1))
 				annotations := existingPod.GetAnnotations()
 				val, found := annotations["foo"]
 				Expect(val).To(BeEmpty())
