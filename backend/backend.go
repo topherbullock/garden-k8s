@@ -4,14 +4,18 @@ import (
 	"errors"
 	"time"
 
+	"github.com/topherbullock/garden-k8s/container"
+
 	"code.cloudfoundry.org/garden"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 var errNotImpl = errors.New("Not implemented")
 
 type backend struct {
-	client Client
+	client    Client
+	namespace string
 }
 
 //go:generate counterfeiter . Client
@@ -20,10 +24,11 @@ type Client interface {
 	Pods(string) v1.PodInterface
 }
 
-func New(client Client) garden.Backend {
+func New(namespace string, client Client) garden.Backend {
 
 	return &backend{
-		client: client,
+		client:    client,
+		namespace: namespace,
 	}
 }
 
@@ -43,8 +48,24 @@ func (b *backend) Destroy(handle string) error {
 	return errNotImpl
 }
 
-func (b *backend) Containers(garden.Properties) ([]garden.Container, error) {
-	return []garden.Container{}, errNotImpl
+func (b *backend) Containers(props garden.Properties) ([]garden.Container, error) {
+	var containers []garden.Container
+	podsClient := b.client.Pods(b.namespace)
+
+	pods, err := podsClient.List(meta_v1.ListOptions{})
+	if err != nil {
+		return containers, err
+	}
+
+	for _, pod := range pods.Items {
+		containers = append(containers, container.New(pod.Name, pod.Namespace, podsClient))
+	}
+
+	return containers, nil
+}
+
+func listOptsFromProperties(props garden.Properties) {
+
 }
 
 func (b *backend) BulkInfo(handles []string) (map[string]garden.ContainerInfoEntry, error) {

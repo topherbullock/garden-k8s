@@ -5,6 +5,10 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"github.com/topherbullock/garden-k8s/backend"
+	"github.com/topherbullock/garden-k8s/backend/backendfakes"
+	"github.com/topherbullock/garden-k8s/v1fakes"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/client-go/pkg/api/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,12 +16,16 @@ import (
 
 var _ = Describe("Backend", func() {
 	var (
-		k8s    garden.Backend
-		client backend.Client
+		k8s        garden.Backend
+		fakeClient *backendfakes.FakeClient
+		fakePods   *v1fakes.FakePodInterface
 	)
 
 	BeforeEach(func() {
-		k8s = backend.New(client)
+		fakeClient = new(backendfakes.FakeClient)
+		fakePods = new(v1fakes.FakePodInterface)
+		fakeClient.PodsReturns(fakePods)
+		k8s = backend.New("test-namespace", fakeClient)
 	})
 
 	Describe("Ping", func() {
@@ -54,11 +62,60 @@ var _ = Describe("Backend", func() {
 
 	Describe("Containers", func() {
 		var props garden.Properties
-
-		It("returns an error", func() {
-			_, err := k8s.Containers(props)
-			Expect(err).To(HaveOccurred())
+		BeforeEach(func() {
+			fakePods.ListReturns(&v1.PodList{
+				Items: []v1.Pod{
+					v1.Pod{
+						meta_v1.TypeMeta{},
+						meta_v1.ObjectMeta{
+							Name: "free-willy",
+							Annotations: map[string]string{
+								"type": "killer",
+							},
+						},
+						v1.PodSpec{},
+						v1.PodStatus{},
+					},
+					v1.Pod{
+						meta_v1.TypeMeta{},
+						meta_v1.ObjectMeta{
+							Name: "shamu",
+							Annotations: map[string]string{
+								"type": "killer",
+							},
+						},
+						v1.PodSpec{},
+						v1.PodStatus{},
+					},
+					v1.Pod{
+						meta_v1.TypeMeta{},
+						meta_v1.ObjectMeta{
+							Name: "some-other-whale",
+							Annotations: map[string]string{
+								"type": "beluga",
+							},
+						},
+						v1.PodSpec{},
+						v1.PodStatus{},
+					},
+				},
+			}, nil)
 		})
+
+		Context("without any filter properties", func() {
+			It("returns a list of containers", func() {
+				containers, err := k8s.Containers(props)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(len(containers)).To(Equal(3))
+
+				By("keeping the ordering from the k8s client")
+				Expect(containers[0].Handle()).To(Equal("free-willy"))
+				Expect(containers[1].Handle()).To(Equal("shamu"))
+				Expect(containers[2].Handle()).To(Equal("some-other-whale"))
+			})
+		})
+
 	})
 
 	Describe("BulkInfo", func() {
